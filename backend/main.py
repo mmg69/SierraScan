@@ -1,4 +1,7 @@
 import os
+import shutil
+from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 
 from .processing import extract_text_from_pdf, prepare_text_for_similarity, detect_language_simple
 from .similarity import compare_two_texts
@@ -7,8 +10,6 @@ from .ml_model import predict_pair, get_model_metrics
 
 from typing import List
 from .evaluation import evaluate_dataset_model, find_best_threshold
-from fastapi import FastAPI, UploadFile, File, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
 from .storage import (
     init_db,
     save_doc,
