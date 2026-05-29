@@ -7,3 +7,4 @@ requests
 pymupdf
 datasets
 pandas
+joblib

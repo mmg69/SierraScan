@@ -1,10 +1,14 @@
 import os
-import shutil
+
+from .processing import extract_text_from_pdf, prepare_text_for_similarity, detect_language_simple
+from .similarity import compare_two_texts
+from .dataset_loader import load_sample_dataset
+from .ml_model import predict_pair, get_model_metrics 
+
 from typing import List
 from .evaluation import evaluate_dataset_model, find_best_threshold
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-
 from .storage import (
     init_db,
     save_doc,
@@ -361,4 +365,42 @@ def find_best_threshold_endpoint(
         raise HTTPException(
             status_code=500,
             detail=f"No se pudo buscar el mejor umbral: {error}"
+        )
+@app.get("/api/model-metrics")
+def read_model_metrics():
+    """
+    Devuelve las métricas del modelo supervisado entrenado.
+    """
+    try:
+        return get_model_metrics()
+
+    except Exception as error:
+        raise HTTPException(
+            status_code=500,
+            detail=f"No se pudieron cargar las métricas del modelo: {error}"
+        )
+
+
+@app.post("/api/predict-pair")
+def predict_text_pair(payload: dict):
+    """
+    Predice si dos textos forman un par similar/plagio usando el modelo entrenado.
+    """
+    text_a = payload.get("text_a", "")
+    text_b = payload.get("text_b", "")
+
+    if not text_a.strip() or not text_b.strip():
+        raise HTTPException(
+            status_code=400,
+            detail="Se requieren text_a y text_b."
+        )
+
+    try:
+        result = predict_pair(text_a, text_b)
+        return result
+
+    except Exception as error:
+        raise HTTPException(
+            status_code=500,
+            detail=f"No se pudo generar la predicción: {error}"
         )
