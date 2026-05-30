@@ -4,8 +4,8 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
 
-PLAGIARISM_THRESHOLD = 0.75
-SUSPICIOUS_THRESHOLD = 0.45
+PLAGIARISM_THRESHOLD = 0.70
+SUSPICIOUS_THRESHOLD = 0.40
 
 
 def compare_two_texts(text_a: str, text_b: str) -> Dict[str, Any]:
@@ -15,6 +15,8 @@ def compare_two_texts(text_a: str, text_b: str) -> Dict[str, Any]:
     Retorna:
     - similarity_score: valor entre 0 y 1
     - similarity_percentage: porcentaje entre 0 y 100
+    - cosine_distance: distancia de coseno entre 0 y 1
+    - distance_percentage: distancia expresada como porcentaje
     - status: clasificación textual del resultado
     """
     if not text_a or not text_b:
@@ -31,7 +33,6 @@ def compare_two_texts(text_a: str, text_b: str) -> Dict[str, Any]:
     try:
         tfidf_matrix = vectorizer.fit_transform([text_a, text_b])
         score = cosine_similarity(tfidf_matrix[0:1], tfidf_matrix[1:2])[0][0]
-
     except ValueError:
         score = 0.0
 
@@ -46,34 +47,17 @@ def compare_two_texts(text_a: str, text_b: str) -> Dict[str, Any]:
         "status": classify_similarity(score)
     }
 
-    vectorizer = TfidfVectorizer()
-
-    try:
-        tfidf_matrix = vectorizer.fit_transform([text_a, text_b])
-        score = cosine_similarity(tfidf_matrix[0:1], tfidf_matrix[1:2])[0][0]
-
-    except ValueError:
-        score = 0.0
-
-    percentage = round(float(score) * 100, 2)
-
-    return {
-        "similarity_score": round(float(score), 4),
-        "similarity_percentage": percentage,
-        "status": classify_similarity(score)
-    }
-
 
 def classify_similarity(score: float) -> str:
     """
     Clasifica la similitud de acuerdo con umbrales interpretables.
 
-    >= 75%  : posible plagio
-    >= 45%  : similitud sospechosa
-    < 45%   : similitud baja
+    >= 70%  : plagio
+    >= 40%  : similitud sospechosa
+    < 40%   : similitud baja
     """
     if score >= PLAGIARISM_THRESHOLD:
-        return "Posible plagio"
+        return "Plagio"
 
     if score >= SUSPICIOUS_THRESHOLD:
         return "Similitud sospechosa"
@@ -114,6 +98,8 @@ def compare_all_documents(docs: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
                 "doc_b_name": doc_b.get("filename"),
                 "similarity_score": comparison["similarity_score"],
                 "similarity_percentage": comparison["similarity_percentage"],
+                "cosine_distance": comparison["cosine_distance"],
+                "distance_percentage": comparison["distance_percentage"],
                 "status": comparison["status"],
                 "source_a": doc_a.get("source_type"),
                 "source_b": doc_b.get("source_type"),
@@ -177,6 +163,8 @@ def compare_dataset_pairs_only(docs: List[Dict[str, Any]]) -> List[Dict[str, Any
             "doc_b_name": doc_b.get("filename"),
             "similarity_score": comparison["similarity_score"],
             "similarity_percentage": comparison["similarity_percentage"],
+            "cosine_distance": comparison["cosine_distance"],
+            "distance_percentage": comparison["distance_percentage"],
             "status": comparison["status"],
             "expected_label": expected_label,
             "expected_meaning": expected_label_to_text(expected_label),
@@ -197,6 +185,7 @@ def compare_dataset_pairs_only(docs: List[Dict[str, Any]]) -> List[Dict[str, Any
 def expected_label_to_text(label: int | None) -> str:
     """
     Traduce la etiqueta original del dataset.
+
     1 = par positivo / similar según el dataset
     0 = par negativo / no similar según el dataset
     """
@@ -211,11 +200,11 @@ def expected_label_to_text(label: int | None) -> str:
 
 def matches_expected_label(score: float, expected_label: int | None) -> bool | None:
     """
-    Compara la predicción del sistema con la etiqueta real del dataset.
+    Compara la predicción basada en umbral con la etiqueta real del dataset.
 
     Para simplificar:
-    - Si el score es >= 75%, el sistema predice plagio.
-    - Si es menor a 75%, predice no plagio.
+    - Si el score es >= 70%, el sistema predice positivo/similar.
+    - Si es menor a 70%, predice negativo/no similar.
     """
     if expected_label is None:
         return None

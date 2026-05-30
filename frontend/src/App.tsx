@@ -175,9 +175,21 @@ function App() {
   }
 
   function getStatusClass(status: string) {
-    if (status === "Posible plagio") return "danger";
-    if (status === "Similitud sospechosa") return "warning";
-    return "safe";
+    const normalized = status.toLowerCase();
+
+    if (normalized.includes("plagio")) {
+      return "badge badge-danger";
+    }
+
+    if (normalized.includes("sospechosa")) {
+      return "badge badge-warning";
+    }
+
+    if (normalized.includes("baja")) {
+      return "badge badge-success";
+    }
+
+    return "badge badge-neutral";
   }
 
   function formatDatasetLabel(label?: number | null) {
@@ -313,7 +325,7 @@ function App() {
                     <td>{result.doc_b_name}</td>
                     <td>{result.similarity_percentage}%</td>
                     <td>
-                      <span className={`badge ${getStatusClass(result.status)}`}>
+                      <span className={getStatusClass(result.status)}>
                         {result.status}
                       </span>
                     </td>
